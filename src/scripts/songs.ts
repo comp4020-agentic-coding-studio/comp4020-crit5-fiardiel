@@ -19,7 +19,13 @@ export const SONGS: Song[] = [
   { title: "Breaking the Habit", artist: "Linkin Park", startOffsetSec: 0 },
   { title: "Somewhere I Belong", artist: "Linkin Park", startOffsetSec: 0 },
   { title: "What I've Done", artist: "Linkin Park", startOffsetSec: 0 },
-  { title: "Bleed It Out", artist: "Linkin Park", startOffsetSec: 0 },
+  // Tuned after playtesting: the iTunes preview for this song is a choppy
+  // vocal-sample intro that measures dead silent for the first ~1.1s and
+  // stays intermittently silent through ~4.2s (confirmed via ffmpeg
+  // silencedetect on the actual fetched previewUrl), so tier 1 (0.1s) and
+  // tier 2 (0.5s) landed on nothing. 5s lands after the choppy intro, in
+  // continuous audio, with 25s of clip still left for the 15s max tier.
+  { title: "Bleed It Out", artist: "Linkin Park", startOffsetSec: 5 },
   { title: "New Divide", artist: "Linkin Park", startOffsetSec: 0 },
   { title: "Burn It Down", artist: "Linkin Park", startOffsetSec: 0 },
   { title: "Castle of Glass", artist: "Linkin Park", startOffsetSec: 0 },
