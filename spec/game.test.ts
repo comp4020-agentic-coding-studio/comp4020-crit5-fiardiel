@@ -27,10 +27,16 @@ const doc = new JSDOM(html).window.document;
 // astro.config.ts sets a GitHub Pages `base`; a shipped <script src> is
 // base-prefixed while the file on disk isn't — strip the base before resolving.
 const base = (astroConfig.base ?? "/").replace(/\/$/, "");
-const scripts = [...doc.querySelectorAll("script[src]")]
-  .map((el) => el.getAttribute("src"))
-  .filter((src): src is string => src != null && !src.startsWith("http"))
-  .map((src) => {
+const scripts = [...doc.querySelectorAll("script")]
+  .map((el) => {
+    const src = el.getAttribute("src");
+    if (src == null) {
+      // Astro inlines small bundles directly into the page rather than
+      // emitting a separate chunk — this is still first-party JS, just
+      // not externalized. Read it straight from the DOM.
+      return el.textContent ?? "";
+    }
+    if (src.startsWith("http")) return ""; // third-party, e.g. an analytics tag
     const rel = base && src.startsWith(`${base}/`) ? src.slice(base.length) : src;
     return readFileSync(resolve("dist", rel.replace(/^\.?\//, "")), "utf8");
   })
