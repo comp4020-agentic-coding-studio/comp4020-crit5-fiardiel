@@ -16,10 +16,10 @@ requires, mapped to this design:
 | Genre open, one mechanic, obvious in 10s | One mechanic: type a guess, hear a longer clip if wrong. No second control. |
 | No tutorial content anywhere | A text input and nothing else. The convention (type → Enter → find out) needs no explanation. |
 | Static, no backend, ships to GitHub Pages | Audio comes from a client-side `fetch` to the iTunes Search API (no auth, no server). Song data is a static file in the repo. |
-| It can be lost | 3 lives; exhausting them ends the run. |
-| A stranger reaches an ending inside 5 minutes | ~26-song list, one round takes 5-20s; a full run or a loss both land well under 5 minutes. |
+| It can be lost | 3 lives on every difficulty; exhausting them ends the run. |
+| A stranger reaches an ending inside 5 minutes | Easy (5 songs) and Medium (10 songs) land well under 5 minutes; Hard (20 songs) is the deliberate longer/endurance option for a returning player, not the default. |
 | One rule has a focused automated test | The scoring ladder and the title-matching function are pure, and are exactly what gets unit-tested. |
-| One change verified by playing, not reading code | Match strictness and/or per-song start offsets are the tuning knobs — see "Tuning knobs" below. |
+| One change verified by playing, not reading code | See "Playtest-driven changes" below — this build shipped, was played, and was reworked on that feedback, twice. |
 | PROCESS.md, reflections/crit-5.md, incremental commits | Carried over from the existing harness unchanged. |
 
 No IP/licensing constraint is stated in the brief. See "Audio pipeline and
@@ -41,6 +41,12 @@ Attempt 5 → clip length 15s
 The ladder is identical for every song and every round — no song is
 individually harder, and rounds don't escalate in difficulty. The only
 lever is player skill against a fixed curve.
+
+> **Superseded by playtesting — see "Playtest-driven changes" below.** The
+> paragraphs immediately below describe the original MVP control scheme
+> (▶ button, no replay, silent life loss, no difficulty choice). They're
+> kept for history; the "Playtest-driven changes" section describes what
+> actually shipped and why.
 
 There are two controls: a large centered ▶ button, and a text input.
 Browsers block audio autoplay before any user gesture, so the very first
@@ -75,11 +81,12 @@ available action.
 - Correct on tier 5 (15s): **1 point**
 - Miss (wrong on all 5 tiers): **0 points**, lose one life
 
-**Lives:** the player starts with 3. A miss costs one life. Losing the
-third life ends the run immediately (loss — final score shown, tap
-anywhere/press Enter to restart). Correctly finishing every song in the
-list without running out of lives ends the run as a win (final score
-shown, same restart affordance).
+**Lives and difficulty (superseded — see "Playtest-driven changes"):** the
+player starts with 3. A miss costs one life. Losing the third life ends
+the run immediately (loss — final score shown, tap anywhere/press Enter to
+restart). Correctly finishing every song in the list without running out
+of lives ends the run as a win (final score shown, same restart
+affordance).
 
 This is the entire loss/win surface: no timer, no other fail state.
 
@@ -145,7 +152,7 @@ Mama, Disenchanted, Thank You for the Venom.
 26 songs total, every one returning a real `previewUrl` as of this design
 session.
 
-## UI
+## UI (superseded — see "Playtest-driven changes")
 
 Single screen, dark background (visual continuity with this repo's
 existing dark aesthetic is a nice-to-have, not a requirement):
@@ -163,6 +170,51 @@ existing dark aesthetic is a nice-to-have, not a requirement):
   showing the tier number would functionally be a difficulty readout,
   which adds nothing the player needs to act on.
 - End-of-run screen: final score, win or loss state, "tap to play again."
+
+## Playtest-driven changes (what actually shipped)
+
+The MVP above shipped first and was played. Real playtesting surfaced four
+problems the design above didn't anticipate, all fixed in the same round:
+
+1. **The 0.5s tier had no indicator, and the ▶ button vanished with no way
+   to replay a clip.** A player who missed a guess had no way to hear the
+   current clip again, and nothing on screen told them which tier (of 5)
+   they were on. Fix: a **replay button** (`#replay`, always visible during
+   a round — tapping it replays the current tier's clip from a cached URL,
+   no re-fetch) and **tier pips** (`#tier-pips`, one pip per reveal-ladder
+   step, marking the current one) — both contradict the original "no round
+   counter, no tier indicator" UI rule above; that rule turned out to be
+   wrong once actually played.
+2. **A life was lost silently** — the run just moved to the next song with
+   no feedback that anything had happened. Fix: a new state-machine phase,
+   `"reveal"`, entered on any last-tier miss. It shows the missed song's
+   title/artist and how many lives are left, and pauses the run (further
+   guesses are a no-op) until the player acknowledges it (tap or Enter) —
+   see `acknowledgeReveal` in `src/scripts/rules.ts`.
+3. **The run length was invisible and, once asked, wrong to leave fixed.**
+   The first playtest question was "is this 5 songs?" (it was actually a
+   flat 26). Rather than just adding a progress bar to the fixed 26-song
+   run, the next round of feedback asked for player-chosen **difficulty**:
+   Easy (5 songs), Medium (10), Hard (20), all at 3 lives — this replaces
+   the flat 26-song/3-life run everywhere above. The difficulty buttons
+   themselves are now the audio-autoplay-unlock gesture (one tap both
+   picks a difficulty and starts the run), replacing the ▶ button. A
+   **progress bar** (`#progress-bar`, one segment per song in the chosen
+   run) shows hit/miss/current across the whole run.
+4. **Typing an exact, punctuation-sensitive title from memory was harder
+   than the game intended to test.** The strict `matchesTitle` rule was
+   never loosened (see "Tuning knobs" below for why), but the *input*
+   gained substring-matched **autocomplete suggestions**, drawn from the
+   full 26-song list (not just the current run — Hard, at 20 of 26 songs,
+   would otherwise leak most of its own answer set through the suggestion
+   list). A custom combobox, not a native `<datalist>`: Safari and Firefox
+   only prefix-match datalist options, which would miss "In the End" for a
+   query of "end".
+
+These four are the actual "one change verified by playing, not reading
+code" this spec's compliance table promises — played twice, not once,
+because the first fix round surfaced problems the second round then
+addressed.
 
 ## Technical architecture
 
@@ -183,9 +235,16 @@ Reuses the existing harness from the Echo build, same shape:
 - `spec/*.test.ts` — Vitest, same pattern as Echo's `spec/rules.test.ts`:
   pure-function tests against `game.ts`.
 
-## Tuning knobs (for the mandatory playtest-driven change)
+## Tuning knobs (superseded — the mandatory playtest-driven change happened; see above)
 
-Pick **one** after actually playing a full run, cite it in `PROCESS.md`:
+This section originally asked for **one** knob to be picked after playing
+a full run. What actually happened: two full playtest rounds, both cited
+in "Playtest-driven changes" above and in `PROCESS.md`. `matchesTitle`
+itself was never loosened — the autocomplete suggestions addressed the
+same "exact title from memory" friction without weakening what counts as
+a correct guess, which was the better fix once actually played (it doesn't
+let a lucky near-miss score points it shouldn't). The knobs below remain
+available if a future playtest round asks for them:
 
 - Loosen `matchesTitle` (e.g. allow a partial/prefix match, or small edit
   distance) if strict matching feels unfair rather than skillful.
@@ -193,15 +252,19 @@ Pick **one** after actually playing a full run, cite it in `PROCESS.md`:
   silence or a count-in rather than a hook.
 - Adjust the ladder itself (e.g. `[0.2, 1, 3, 8, 15]`) if 0.1s is
   imperceptible rather than merely hard.
-- Adjust lives (3 → 2 or 4) if runs end too fast or drag on too long.
+- Adjust lives-per-difficulty if a tier ends too fast or drags on too long.
 
 ## Explicitly out of scope for this build
 
 - No live/current chart data (Indonesian top-50 or otherwise) — the list
   is a fixed, curated snapshot.
 - No fuzzy/typo-tolerant matching in the MVP (a tuning candidate, not a
-  day-one feature).
-- No difficulty variation between songs or rounds (per the "just do the
-  points thingy" decision — lives + scoring are the only stakes).
+  day-one feature) — autocomplete suggestions cover the same friction
+  without loosening `matchesTitle` itself; see "Playtest-driven changes."
+- No difficulty variation *within* a run (a chosen difficulty's song count
+  and lives are fixed for that run) — but difficulty *is* now a pre-run
+  player choice (Easy/Medium/Hard), which supersedes this build's original
+  "no difficulty variation, period" decision; see "Playtest-driven
+  changes."
 - No album art, lyrics, or metadata beyond title/artist — avoids any
   reproduction-of-copyrighted-text question entirely.

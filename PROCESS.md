@@ -5,10 +5,12 @@
 **One More Second**, a Heardle-style song-guessing game: one Linkin Park or My
 Chemical Romance song per round, revealed through a fixed ladder of iTunes
 preview clips that starts at a tenth of a second and grows to fifteen. Type
-the title, get it right and the clip shrinks back down for the next song; get
-it wrong five times and you lose a life. Three lives, 26 songs, one round
-takes seconds — a stranger reaches a win or a loss well inside five minutes,
-with no control on screen beyond a ▶ button and a text input.
+the title (or pick it from autocomplete suggestions), get it right and the
+clip shrinks back down for the next song; get it wrong five times and a
+reveal panel shows the song and that you lost a life. Three lives on every
+difficulty; pick Easy (5 songs), Medium (10), or Hard (20) before the run
+starts — tier pips and a progress bar track where you are inside it, and a
+replay button lets you hear the current clip again at any time.
 
 ## The moments that mattered
 
@@ -70,3 +72,34 @@ with no control on screen beyond a ▶ button and a text input.
    verified against the live API across the full 26-song pool with zero
    regressions, and reverts that offset back to `0` since the correct asset
    has no silence to skip.
+
+4. **A real playtest, not a review, found what actually made the game feel
+   bad — and it took two rounds of feedback to land.** Once the build above
+   shipped, I asked to actually play it. The first round of feedback was
+   concrete: no indicator for the 0.5s tier, the ▶ button disappearing with
+   no way to replay a clip, a life lost with zero on-screen acknowledgement,
+   and the discovery that the "5 songs" the player assumed they were playing
+   was actually a flat 26. [`af3bd6c`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit5-fiardiel/commit/af3bd6c)
+   added a `"reveal"` phase to the state machine (`src/scripts/rules.ts`) so a
+   last-tier miss pauses the run on the missed song's title/artist and the
+   life count, instead of silently advancing. A second, more specific round
+   of feedback then asked for player-chosen difficulty (Easy 5/Medium
+   10/Hard 20, all 3 lives) rather than a fixed run length, plus autocomplete
+   suggestions on the guess input.
+   [`8930bf1`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit5-fiardiel/commit/8930bf1)
+   wired all of it in: a difficulty-picker idle screen (the difficulty tap
+   itself is now the audio-autoplay-unlock gesture, replacing the ▶ button),
+   tier pips, a progress bar, a replay button backed by a URL cache so
+   replaying or advancing tiers never re-fetches iTunes, and a custom
+   combobox — not a native `<datalist>`, which only prefix-matches in
+   Safari/Firefox — drawing substring-matched suggestions from the full
+   26-song list rather than just the current run, so Hard's 20-of-26 songs
+   don't leak most of the answer set through the suggestion dropdown. The
+   design spec (`docs/superpowers/specs/2026-08-31-song-guess-game-design.md`)
+   was updated in the same round to mark the superseded sections and record
+   why each change was made, rather than silently drifting from what the
+   code now does. This is the mandatory "one change verified by playing, not
+   reading code" the spec's compliance table promises — it happened twice,
+   because the first fix round surfaced problems (run length, the strictness
+   of typing an exact title from memory) that the second round then
+   addressed.
