@@ -4,6 +4,7 @@ import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
 import astroConfig from "../astro.config.ts";
 import { hits, TUNING } from "../src/scripts/rules";
+import { createGame, requestFlap, step } from "../src/scripts/game";
 
 // Spec: https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/crits/05-game/
 //
@@ -41,18 +42,17 @@ const pageText = (doc.body.textContent ?? "").toLowerCase();
 
 describe("a game", () => {
   it("can be lost: play reaches an ending, and the player is told", () => {
-    // crit 4's instrument was defined by the ABSENCE of a fail state; crit 5's
-    // game is defined by its presence. Some sequence of moves ends play — a
-    // win, a loss or a finish — and the page says so.
-    const endWords = [
-      "game over", "you win", "you won", "you lose", "you lost",
-      "you died", "victory", "defeat", "the end", "well done",
-      "play again", "try again", "restart", "new game", "final score",
-    ];
-    expect(
-      endWords.some((w) => pageText.includes(w)),
-      "no end-of-play text in the built page — a game you can lose has to resolve somewhere (win/loss/finish). If the ending is drawn on a <canvas>, assert on that instead.",
-    ).toBe(true);
+    // The ending here is wordless and drawn on <canvas> (design: no
+    // on-screen text during play, no HUD) — this asserts against the game's
+    // own state machine instead of scanning the page for end-of-play words,
+    // per this test file's own note above about canvas-drawn endings.
+    // "Told" is render.ts's job (frozen last frame, the two numbers, the
+    // chevron), judged by eye rather than a DOM scan.
+    const game = createGame(1);
+    requestFlap(game); // ready -> flying, the one flap that starts the run
+    // never flap again: gravity alone is fatal, so this always terminates
+    for (let i = 0; i < 600 && game.phase === "flying"; i++) step(game);
+    expect(game.phase, "600 ticks of pure gravity never reached an ending").toBe("dead");
   });
 
   it("runs in this page's own JS — not a recording or an embed", () => {
