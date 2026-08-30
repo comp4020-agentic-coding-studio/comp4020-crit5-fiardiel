@@ -55,3 +55,21 @@ export function stepBat(bat: Bat, flapped: boolean): Bat {
     : Math.min(bat.vy + TUNING.gravity, TUNING.terminalVelocity);
   return { y: bat.y + vy, vy };
 }
+
+/** 1 -> 0 ease-out: steep right after a flap, flattening out by
+ *  decayTicks, clamped there. */
+function decay(ticksSinceFlap: number): number {
+  const progress = Math.min(Math.max(ticksSinceFlap / TUNING.decayTicks, 0), 1);
+  return (1 - progress) ** 2;
+}
+
+/** Visibility radius: MAX on the flap tick, easing back to the AURA
+ *  floor. Never below AURA — the fairness guarantee the design calls
+ *  out. */
+export function sightRadius(ticksSinceFlap: number): number {
+  return TUNING.aura + (TUNING.maxSight - TUNING.aura) * decay(ticksSinceFlap);
+}
+
+export function reachedMilestone(distance: number): boolean {
+  return distance >= TUNING.milestoneDistance;
+}
