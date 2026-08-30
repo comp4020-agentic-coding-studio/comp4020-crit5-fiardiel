@@ -45,3 +45,13 @@ export function hits(bat: Bat, pillar: Pillar): boolean {
   const bottomOfGap = pillar.gapY + pillar.gapHalf;
   return bat.y - TUNING.batRadius <= topOfGap || bat.y + TUNING.batRadius >= bottomOfGap;
 }
+
+/** Advances one fixed 60Hz tick. A flap SETS vy to a fixed impulse (it
+ *  does not add to it, so mashing does not accumulate lift); otherwise
+ *  gravity accelerates the fall, capped at TUNING.terminalVelocity. */
+export function stepBat(bat: Bat, flapped: boolean): Bat {
+  const vy = flapped
+    ? -TUNING.flapImpulse
+    : Math.min(bat.vy + TUNING.gravity, TUNING.terminalVelocity);
+  return { y: bat.y + vy, vy };
+}
