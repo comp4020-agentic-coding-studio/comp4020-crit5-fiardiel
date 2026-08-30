@@ -14,7 +14,7 @@ export async function fetchPreviewUrl(
   fetchImpl: typeof fetch = fetch,
 ): Promise<string | null> {
   const term = encodeURIComponent(`${artist} ${title}`);
-  const url = `https://itunes.apple.com/search?term=${term}&media=music&limit=1`;
+  const url = `https://itunes.apple.com/search?term=${term}&media=music&entity=song&limit=1`;
   const res = await fetchImpl(url);
   if (!res.ok) return null;
   const data = (await res.json()) as ITunesSearchResponse;
@@ -38,17 +38,29 @@ export function playClip(
   setTimeoutImpl: typeof setTimeout = setTimeout,
 ): void {
   audio.pause();
-  audio.src = url;
+  // Per the HTML media spec, assigning .src re-runs the load algorithm even
+  // when the value is unchanged — so only assign it when it's actually
+  // changing, to avoid an unnecessary re-buffer between tiers of the same
+  // song.
+  if (audio.src !== url) audio.src = url;
   audio.currentTime = startOffsetSec;
   const result = audio.play();
-  if (result && typeof (result as Promise<void>).catch === "function") {
-    (result as Promise<void>).catch(() => {
-      // Autoplay can be rejected by the browser; nothing to recover — the
-      // player just stays silent for this clip. Swallowing avoids an
-      // unhandled-rejection console error over a case that isn't actionable.
-    });
+  const arm = (): void => {
+    setTimeoutImpl(() => {
+      audio.pause();
+    }, durationSec * 1000);
+  };
+  if (result && typeof (result as Promise<void>).then === "function") {
+    // Arm the stop timer off the play promise's resolution — i.e. when
+    // playback actually begins — not at call time, otherwise the clip's
+    // audible window is eaten by however long buffering takes. If play()
+    // rejects (autoplay denied by the browser), there's nothing playing to
+    // stop, so don't arm the timer; just swallow the rejection to avoid an
+    // unhandled-rejection console error over a case that isn't actionable.
+    (result as Promise<void>).then(arm, () => {});
+  } else {
+    // Some environments/mocks don't return a thenable from play() — fall
+    // back to arming immediately.
+    arm();
   }
-  setTimeoutImpl(() => {
-    audio.pause();
-  }, durationSec * 1000);
 }

@@ -107,9 +107,10 @@ Song data is a static list in source (title + artist; no live chart, no
 scraping) — see the confirmed list below. At runtime:
 
 1. For the current round's song, `fetch` the iTunes Search API:
-   `https://itunes.apple.com/search?term=<artist>+<title>&media=music&limit=1`
+   `https://itunes.apple.com/search?term=<artist>+<title>&media=music&entity=song&limit=1`
    (no key, no auth, CORS-enabled, confirmed working during design — see
-   spot-check results below).
+   spot-check results below). `entity=song` matters: without it, the API can
+   return a `music-video` asset instead of the actual song for some queries.
 2. Read `previewUrl` from the first result. This is a ~30s AAC clip hosted
    on Apple's own CDN.
 3. Play it through an `<audio>` element starting at a per-song

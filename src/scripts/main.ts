@@ -43,6 +43,7 @@ function currentSong() {
 function render(): void {
   scoreOut.textContent = String(state.score);
   livesOut.textContent = "♥".repeat(state.lives);
+  livesOut.setAttribute("aria-label", `${state.lives} lives left`);
   idleScreen.hidden = state.phase !== "idle";
   playScreen.hidden = state.phase !== "playing";
   endScreen.hidden = state.phase === "idle" || state.phase === "playing";
@@ -57,9 +58,19 @@ function render(): void {
   }
 }
 
+// Bumped on every call to playCurrentTier() and on restart(), so a stale
+// in-flight fetch from an earlier tier/run can recognize it's been
+// superseded and drop its result instead of restarting or truncating
+// whatever the player has since moved on to.
+let playToken = 0;
+
 async function playCurrentTier(): Promise<void> {
+  const token = ++playToken;
   const song = currentSong();
   if (!song) return;
+  const tier = state.tier; // captured with the song, before the await —
+                            // otherwise a stale song could pair with a tier
+                            // duration that has since moved on.
   let url: string | null;
   try {
     url = await fetchPreviewUrl(song.artist, song.title);
@@ -70,11 +81,14 @@ async function playCurrentTier(): Promise<void> {
     // throw here would otherwise become an unhandled promise rejection.
     return;
   }
+  if (token !== playToken) return; // superseded by a later call — drop it
   if (!url) return;
-  playClip(clip, url, song.startOffsetSec, TIERS[state.tier]);
+  playClip(clip, url, song.startOffsetSec, TIERS[tier]);
 }
 
 function restart(): void {
+  playToken++;
+  clip.pause();
   order = shuffledSongs(SONGS);
   state = createInitialState(order.length);
   render();

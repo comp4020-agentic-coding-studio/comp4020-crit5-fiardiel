@@ -13,6 +13,7 @@ describe("fetchPreviewUrl", () => {
     const calledUrl = fakeFetch.mock.calls[0][0] as string;
     expect(calledUrl).toContain("itunes.apple.com/search");
     expect(calledUrl).toContain("media=music");
+    expect(calledUrl).toContain("entity=song");
     expect(calledUrl).toContain(encodeURIComponent("Linkin Park Numb"));
   });
 
@@ -35,9 +36,14 @@ describe("playClip", () => {
     vi.useRealTimers();
   });
 
-  it("seeks to the start offset, plays, and stops itself after durationSec", () => {
+  it("seeks to the start offset, plays, and stops itself after durationSec", async () => {
     vi.useFakeTimers();
-    const audio = { play: vi.fn(), pause: vi.fn(), currentTime: 0, src: "" };
+    const audio = {
+      play: vi.fn().mockResolvedValue(undefined),
+      pause: vi.fn(),
+      currentTime: 0,
+      src: "",
+    };
 
     playClip(audio, "https://example.com/clip.m4a", 12, 2);
 
@@ -45,18 +51,28 @@ describe("playClip", () => {
     expect(audio.currentTime).toBe(12);
     expect(audio.play).toHaveBeenCalledTimes(1);
 
+    // The stop timer only arms once the play() promise resolves — flush the
+    // microtask queue before advancing fake timers.
+    await Promise.resolve();
+
     vi.advanceTimersByTime(1999);
     expect(audio.pause).toHaveBeenCalledTimes(1);
     vi.advanceTimersByTime(1);
     expect(audio.pause).toHaveBeenCalledTimes(2);
   });
 
-  it("pauses whatever was already playing before starting the new clip", () => {
+  it("pauses whatever was already playing before starting the new clip", async () => {
     vi.useFakeTimers();
-    const audio = { play: vi.fn(), pause: vi.fn(), currentTime: 0, src: "old.m4a" };
+    const audio = {
+      play: vi.fn().mockResolvedValue(undefined),
+      pause: vi.fn(),
+      currentTime: 0,
+      src: "old.m4a",
+    };
     playClip(audio, "new.m4a", 0, 0.1);
     // one defensive pause before the seek/play, one scheduled stop:
     expect(audio.pause).toHaveBeenCalledTimes(1);
+    await Promise.resolve();
     vi.advanceTimersByTime(100);
     expect(audio.pause).toHaveBeenCalledTimes(2);
   });

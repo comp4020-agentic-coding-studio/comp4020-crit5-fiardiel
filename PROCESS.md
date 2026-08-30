@@ -1,14 +1,5 @@
 # Process overview
 
-A reading-guide to how the work came together --- a map to your process, not an
-essay about it.
-
-This file is the shape; the course site's
-[assessment page](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/topics/assessment/#what-you-submit)
-is the requirement, and its
-[word counts](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/topics/assessment/#word-counts)
-cover every deliverable.
-
 ## What I built
 
 **One More Second**, a Heardle-style song-guessing game: one Linkin Park or My
@@ -58,30 +49,23 @@ with no control on screen beyond a ▶ button and a text input.
    which restored typechecking for `spec/invariants.test.ts` too instead of
    quietly turning it off.
 
-3. **This task's own playtest-driven tuning change.** Playing a full run
-   (reasoned from the actual state machine plus the real iTunes Search API,
-   see `reflections/crit-5.md` for why no browser was available this
-   session) turned up one song, "Bleed It Out", whose `previewUrl` — fetched
-   live, the same call the game itself makes — decodes as dead silence for
-   its first ~1.1s and stays choppy through ~4.2s (confirmed by downloading
-   the actual clip and running `ffmpeg -af silencedetect` on it, not by
-   guessing). That's precisely tier 1 (0.1s) and most of tier 2 (0.5s)
-   landing on nothing, for every player, on every run that draws this song.
-   The obvious "safe" move would have been to swap in a different song
-   entirely; instead the design's actual tuning knob —
-   `startOffsetSec` — was raised from `0` to `5` for that one song, landing
-   past the choppy intro in continuous audio with 25 of the preview's ~30
-   seconds still free for the 15s max tier. I know it's right because it's
-   the single lowest-risk fix available (touches one field, on one song, in
-   `src/scripts/songs.ts`) and it's checkable against real, fetched data
-   rather than an assumption about how the song opens — see the diff for the
-   exact value and the comment recording the measured silence window.
-
-## Before you ship
-
-`pnpm check:evidence` verifies your citations resolve to real commits, that a
-reflection entry the marker reads is in `reflections/`, and that your
-`CLAUDE.md` is there --- before a marker ever opens the file. It checks that
-your map is traceable, not that it is good: the marker judges whether your
-small, deliberately chosen set of moments shows real judgement and reflection.
-A green check is not a substitute for that curation.
+3. **A final whole-branch review — not a playtest — is what caught the real
+   audio bug.** Chrome automation stayed unavailable for the entire session
+   (see `reflections/crit-5.md`), so the verification that actually ran was
+   the live iTunes Search API queried for all 26 songs, plus `ffmpeg`
+   loudness measurement (`silencedetect` and mean volume) on the downloaded
+   preview assets. That measurement is what surfaced the real defect: the
+   query in `audio.ts` (`media=music`, no `entity` filter) was returning a
+   `music-video` asset instead of the actual song for 2 of the 26 tracks
+   ("Bleed It Out", "Na Na Na") — both measured 13-22dB quieter than the
+   other 24, and "Na Na Na"'s wrong asset is dead-flat across all 30 seconds
+   with no `startOffsetSec` workaround available at all. That's a more
+   fundamental problem than a missing offset: no silent-intro skip can fix a
+   query that fetches the wrong file in the first place. An earlier pass had
+   raised "Bleed It Out"'s `startOffsetSec` from `0` to `5` to skip what
+   looked like a silent intro — that treated a symptom of this same bug and
+   didn't even close the gap (the tuned offset still measured ~22dB below
+   the pool). This fix corrects the actual cause instead — adding
+   `entity=song` to the query — verified against the live API across the
+   full 26-song pool with zero regressions, and reverts that offset back to
+   `0` since the correct asset has no silence to skip.
