@@ -65,7 +65,8 @@ with no control on screen beyond a ▶ button and a text input.
    raised "Bleed It Out"'s `startOffsetSec` from `0` to `5` to skip what
    looked like a silent intro — that treated a symptom of this same bug and
    didn't even close the gap (the tuned offset still measured ~22dB below
-   the pool). This fix corrects the actual cause instead — adding
-   `entity=song` to the query — verified against the live API across the
-   full 26-song pool with zero regressions, and reverts that offset back to
-   `0` since the correct asset has no silence to skip.
+   the pool). [`ec525eb`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit5-fiardiel/commit/ec525eb)
+   corrects the actual cause instead — adding `entity=song` to the query —
+   verified against the live API across the full 26-song pool with zero
+   regressions, and reverts that offset back to `0` since the correct asset
+   has no silence to skip.
