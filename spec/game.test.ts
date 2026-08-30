@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
 import astroConfig from "../astro.config.ts";
+import { hits, TUNING } from "../src/scripts/rules";
 
 // Spec: https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/crits/05-game/
 //
@@ -87,18 +88,25 @@ describe("a game", () => {
     ).toBeNull();
   });
 
-  it("has a focused automated test for one game rule", () => {
-    // Spec line 5: "One rule of the game has a focused automated test."
-    // Decide the rule — the losing condition is the natural pick, since it's
-    // also spec line 2 — factor it into a pure function under src/scripts/,
-    // and replace this placeholder with a real test of it, e.g.:
-    //
-    //   import { isCaught } from "../src/scripts/rules";
-    //   expect(isCaught({ player: 3, chaser: 3 })).toBe(true);
-    //   expect(isCaught({ player: 3, chaser: 5 })).toBe(false);
-    //
-    expect.fail(
-      "Write a focused test of one game rule, then delete this placeholder (spec line 5).",
-    );
+  it("has a focused automated test for one game rule: hits(bat, pillar)", () => {
+    // Spec line 5, paired with spec line 2 (the losing condition). A pure
+    // box-vs-gap check: does the bat, fixed at TUNING.batX, touch this
+    // pillar's stalactite or stalagmite?
+    const pillar = { x: TUNING.batX, gapY: 300, gapHalf: 65 };
+
+    // dead-centre in the gap: no hit
+    expect(hits({ y: 300, vy: 0 }, pillar)).toBe(false);
+
+    // grazing the stalactite (top): a hit
+    const topOfGap = pillar.gapY - pillar.gapHalf;
+    expect(hits({ y: topOfGap + TUNING.batRadius, vy: 0 }, pillar)).toBe(true);
+
+    // grazing the stalagmite (bottom): a hit
+    const bottomOfGap = pillar.gapY + pillar.gapHalf;
+    expect(hits({ y: bottomOfGap - TUNING.batRadius, vy: 0 }, pillar)).toBe(true);
+
+    // just past the pillar's trailing edge: no hit, even off-gap vertically
+    const passed = { ...pillar, x: TUNING.batX - TUNING.pillarWidth };
+    expect(hits({ y: topOfGap, vy: 0 }, passed)).toBe(false);
   });
 });
