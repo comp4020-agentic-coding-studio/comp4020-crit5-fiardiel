@@ -9,7 +9,7 @@ import "../styles/styles.css";
     <title>One More Second</title>
     <meta
       name="description"
-      content="One More Second: guess the song from a clip that starts at a tenth of a second and grows longer with every wrong answer. 3 lives, 26 Linkin Park and My Chemical Romance songs."
+      content="One More Second: guess the song from a clip that starts at a tenth of a second and grows longer with every wrong answer. Pick Easy, Medium, or Hard; 3 lives; Linkin Park and My Chemical Romance songs."
     />
 
     <!--
@@ -37,10 +37,17 @@ import "../styles/styles.css";
       <audio id="clip"></audio>
 
       <section id="idle-screen">
-        <button id="start" type="button" aria-label="Start">&#9654;</button>
+        <div id="difficulty-picker">
+          <button class="difficulty" data-difficulty="easy" type="button">Easy</button>
+          <button class="difficulty" data-difficulty="medium" type="button">Medium</button>
+          <button class="difficulty" data-difficulty="hard" type="button">Hard</button>
+        </div>
       </section>
 
       <section id="play-screen" hidden>
+        <div id="tier-pips"></div>
+        <div id="progress-bar"></div>
+        <button id="replay" type="button" aria-label="Replay clip">&#8635;</button>
         <form id="guess-form" autocomplete="off">
           <input
             id="guess"
@@ -50,8 +57,17 @@ import "../styles/styles.css";
             autocomplete="off"
             autocapitalize="off"
             spellcheck="false"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded="false"
+            aria-controls="suggestions"
           />
+          <ul id="suggestions" role="listbox" hidden></ul>
         </form>
+        <div id="reveal-panel" hidden>
+          <p id="reveal-message"></p>
+          <p id="reveal-lives"></p>
+        </div>
       </section>
 
       <section id="end-screen" hidden>

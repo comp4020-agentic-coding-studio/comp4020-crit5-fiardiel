@@ -42,11 +42,20 @@ main {
 }
 
 #idle-screen,
-#play-screen,
 #end-screen {
   display: flex;
   align-items: center;
   justify-content: center;
+  min-height: 60vh;
+  padding: 1rem;
+  text-align: center;
+}
+
+#play-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
   min-height: 60vh;
   padding: 1rem;
   text-align: center;
@@ -61,11 +70,87 @@ main {
   display: none;
 }
 
-#start {
-  font-size: 4rem;
+#difficulty-picker {
+  display: flex;
+  gap: 1rem;
+}
+
+.difficulty {
+  font-size: 1.1rem;
+  padding: 1rem 1.75rem;
+  border-radius: 999px;
+  border: 2px solid #f2f2f5;
+  background: transparent;
+  color: #f2f2f5;
+  cursor: pointer;
+}
+
+.difficulty:hover,
+.difficulty:focus-visible {
+  background: #f2f2f5;
+  color: #050507;
+}
+
+/* Tier pips: one per reveal-ladder step, so a player can see how many
+   attempts are left on the current song without being told in words. */
+#tier-pips {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.pip {
+  font-size: 0.75rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid #4a4a52;
+  color: #8a8a94;
+}
+
+.pip-current {
+  border-color: #7dd3fc;
+  color: #7dd3fc;
+}
+
+.pip-spent {
+  border-color: #3a3a40;
+  color: #4a4a52;
+}
+
+/* Progress bar: one segment per song in the run, sized to the chosen
+   difficulty (5/10/20) — hit/miss color the segments already played. */
+#progress-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.3rem;
+  max-width: 90vw;
+}
+
+.seg {
+  width: 1rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: #2a2a30;
+}
+
+.seg-hit {
+  background: #4ade80;
+}
+
+.seg-miss {
+  background: #ff5d7a;
+}
+
+.seg-current {
+  outline: 2px solid #7dd3fc;
+  outline-offset: 1px;
+}
+
+#replay {
+  font-size: 1.75rem;
   line-height: 1;
-  width: 6rem;
-  height: 6rem;
+  width: 3rem;
+  height: 3rem;
   border-radius: 50%;
   border: 2px solid #f2f2f5;
   background: transparent;
@@ -73,13 +158,14 @@ main {
   cursor: pointer;
 }
 
-#start:hover,
-#start:focus-visible {
+#replay:hover,
+#replay:focus-visible {
   background: #f2f2f5;
   color: #050507;
 }
 
 #guess-form {
+  position: relative;
   width: min(90vw, 24rem);
 }
 
@@ -99,6 +185,63 @@ main {
   outline-offset: 2px;
 }
 
+#guess:disabled {
+  opacity: 0.5;
+}
+
+/* Autocomplete dropdown: a plain list positioned under the input, not a
+   native <datalist> — Safari/Firefox only prefix-match those, which would
+   miss "In the End" for a query of "end". */
+#suggestions {
+  position: absolute;
+  z-index: 1;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 0.25rem 0;
+  list-style: none;
+  border: 2px solid #f2f2f5;
+  border-radius: 0.5rem;
+  background: #16161a;
+  text-align: left;
+  max-height: 12rem;
+  overflow-y: auto;
+}
+
+#suggestions[hidden] {
+  display: none;
+}
+
+#suggestions li {
+  padding: 0.6rem 1rem;
+  cursor: pointer;
+}
+
+#suggestions li.suggestion-active,
+#suggestions li:hover {
+  background: #2a2a30;
+}
+
+#reveal-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 28rem;
+  cursor: pointer;
+}
+
+#reveal-message {
+  font-size: 1.4rem;
+  margin: 0;
+}
+
+#reveal-lives {
+  font-size: 1.1rem;
+  color: #ff5d7a;
+  margin: 0;
+}
+
 #end-screen {
   cursor: pointer;
 }
@@ -109,10 +252,15 @@ main {
 }
 
 @media (width <= 480px) {
-  #start {
-    width: 5rem;
-    height: 5rem;
-    font-size: 3rem;
+  .difficulty {
+    font-size: 1rem;
+    padding: 0.8rem 1.25rem;
+  }
+
+  #replay {
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 1.4rem;
   }
 
   #guess {

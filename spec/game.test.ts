@@ -3,7 +3,15 @@ import { resolve } from "node:path";
 import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
 import astroConfig from "../astro.config.ts";
-import { LIVES_START, TIERS, applyGuess, createInitialState, matchesTitle, start } from "../src/scripts/rules";
+import {
+  LIVES_START,
+  TIERS,
+  acknowledgeReveal,
+  applyGuess,
+  createInitialState,
+  matchesTitle,
+  start,
+} from "../src/scripts/rules";
 
 // Spec: https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/crits/05-game/
 //
@@ -54,6 +62,10 @@ describe("a game", () => {
       for (let tier = 0; tier < TIERS.length; tier++) {
         state = applyGuess(state, "not the right answer", "the actual title");
       }
+      // Each life-losing miss now pauses on phase "reveal" until acknowledged
+      // (spec: show the answer and that a life was lost) — acknowledging is
+      // what actually carries the state to the next song, or to "lost".
+      state = acknowledgeReveal(state);
     }
     expect(state.phase, `${LIVES_START} missed songs never reached "lost"`).toBe("lost");
   });
