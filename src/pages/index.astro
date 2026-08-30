@@ -6,10 +6,10 @@ import "../styles/styles.css";
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Echo</title>
+    <title>One More Second</title>
     <meta
       name="description"
-      content="Echo: a one-button cave game where every flap is also the only light — a bat's-eye view of Flappy Bird, playable by feel alone."
+      content="One More Second: guess the song from a clip that starts at a tenth of a second and grows longer with every wrong answer."
     />
 
     <!--
@@ -30,11 +30,13 @@ import "../styles/styles.css";
       </nav>
     </header>
     <main>
-      <h1 class="visually-hidden">Echo</h1>
-      <canvas
-        id="game"
-        aria-label="Echo: a bat flying through a dark cave. Tap, click, or press Space, Enter, Up or W to flap."
-      ></canvas>
+      <h1 class="visually-hidden">One More Second</h1>
+      <!-- Real markup (score/lives, ▶ button, guess input, end screen) lands
+           in Task 4. This <audio> exists early, unused, purely so this
+           week's contract test's "an <audio> element exists with no static
+           src" assertion is satisfiable from this task onward. -->
+      <audio id="clip"></audio>
+      <p>One More Second is being built.</p>
     </main>
     <script src="../scripts/main.ts"></script>
   </body>
