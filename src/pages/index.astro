@@ -9,7 +9,7 @@ import "../styles/styles.css";
     <title>One More Second</title>
     <meta
       name="description"
-      content="One More Second: guess the song from a clip that starts at a tenth of a second and grows longer with every wrong answer."
+      content="One More Second: guess the song from a clip that starts at a tenth of a second and grows longer with every wrong answer. 3 lives, 26 Linkin Park and My Chemical Romance songs."
     />
 
     <!--
@@ -28,15 +28,34 @@ import "../styles/styles.css";
           Source on GitHub
         </a>
       </nav>
+      <p id="hud" aria-live="polite">
+        <span id="score">0</span> pts &middot; <span id="lives">&hearts;&hearts;&hearts;</span>
+      </p>
     </header>
     <main>
       <h1 class="visually-hidden">One More Second</h1>
-      <!-- Real markup (score/lives, ▶ button, guess input, end screen) lands
-           in Task 4. This <audio> exists early, unused, purely so this
-           week's contract test's "an <audio> element exists with no static
-           src" assertion is satisfiable from this task onward. -->
       <audio id="clip"></audio>
-      <p>One More Second is being built.</p>
+
+      <section id="idle-screen">
+        <button id="start" type="button" aria-label="Start">&#9654;</button>
+      </section>
+
+      <section id="play-screen" hidden>
+        <form id="guess-form" autocomplete="off">
+          <input
+            id="guess"
+            type="text"
+            placeholder="song title…"
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+          />
+        </form>
+      </section>
+
+      <section id="end-screen" hidden>
+        <p id="end-message"></p>
+      </section>
     </main>
     <script src="../scripts/main.ts"></script>
   </body>

@@ -4,11 +4,17 @@
 
 body {
   margin: 0;
+  min-height: 100dvh;
   background: #050507;
+  color: #f2f2f5;
+  font-family: system-ui, sans-serif;
+  display: flex;
+  flex-direction: column;
 }
 
 main {
   display: block;
+  flex: 1;
 }
 
 .visually-hidden {
@@ -23,13 +29,93 @@ main {
   border: 0;
 }
 
-/* full-bleed canvas: breaks out of any centered max-width ancestor */
-#game {
-  display: block;
-  width: 100vw;
-  height: 100dvh;
-  margin-left: calc(50% - 50vw);
-  margin-right: calc(50% - 50vw);
-  touch-action: none;
+#hud {
+  margin: 0;
+  padding: 1rem;
+  text-align: center;
+  font-size: 1.1rem;
+  letter-spacing: 0.02em;
+}
+
+#lives {
+  color: #ff5d7a;
+}
+
+#idle-screen,
+#play-screen,
+#end-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: 1rem;
+  text-align: center;
+}
+
+/* An id selector otherwise outweighs the UA stylesheet's [hidden] rule, so
+   the sections above would stay visible even with the `hidden` attribute
+   set — main.ts toggles `.hidden` as a property, this is what makes it work. */
+#idle-screen[hidden],
+#play-screen[hidden],
+#end-screen[hidden] {
+  display: none;
+}
+
+#start {
+  font-size: 4rem;
+  line-height: 1;
+  width: 6rem;
+  height: 6rem;
+  border-radius: 50%;
+  border: 2px solid #f2f2f5;
+  background: transparent;
+  color: #f2f2f5;
   cursor: pointer;
+}
+
+#start:hover,
+#start:focus-visible {
+  background: #f2f2f5;
+  color: #050507;
+}
+
+#guess-form {
+  width: min(90vw, 24rem);
+}
+
+#guess {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.9rem 1rem;
+  font-size: 1.25rem;
+  border-radius: 0.5rem;
+  border: 2px solid #f2f2f5;
+  background: #16161a;
+  color: #f2f2f5;
+}
+
+#guess:focus {
+  outline: 2px solid #7dd3fc;
+  outline-offset: 2px;
+}
+
+#end-screen {
+  cursor: pointer;
+}
+
+#end-message {
+  font-size: 1.4rem;
+  max-width: 28rem;
+}
+
+@media (width <= 480px) {
+  #start {
+    width: 5rem;
+    height: 5rem;
+    font-size: 3rem;
+  }
+
+  #guess {
+    font-size: 1.1rem;
+  }
 }
