@@ -3,25 +3,23 @@ import { resolve } from "node:path";
 import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
 import astroConfig from "../astro.config.ts";
-import { hits, TUNING } from "../src/scripts/rules";
-import { createGame, requestFlap, step } from "../src/scripts/game";
+import { LIVES_START, TIERS, applyGuess, createInitialState, matchesTitle, start } from "../src/scripts/rules";
 
 // Spec: https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/crits/05-game/
 //
 // Contract tests for the mechanically-checkable spec lines, checked against the
 // BUILT site (dist/) — the shipped HTML and JS, not the source — plus one
-// focused unit test of a single game rule (spec line 5), which is yours to
-// write once you've decided the rule.
+// focused unit test of a single game rule (spec line 5): matchesTitle, the
+// guess-checking rule the whole loop turns on.
 //
 // What a test can't reach, and the crit judges instead: a stranger finishing
-// inside five minutes, the opening screen making the first move obvious through
-// affordance alone, whether one mechanic stays interesting at five minutes. See
-// spec/README.md.
+// inside five minutes, the opening screen making the first move obvious
+// through the ▶ button alone, whether the escalating-clip loop stays
+// interesting at five minutes. See spec/README.md.
 //
-// These start RED — there's no game yet. Turning them green across the week is
-// the work. Adjust them as the design firms up: they encode today's reading of
-// the contract, not a frozen one. If your ending or your rules live on a
-// <canvas> rather than in the DOM, rewrite the relevant test to assert on that.
+// This starts RED — there's no song game yet. Turning it green across the
+// build is the work. See
+// docs/superpowers/plans/2026-08-31-song-guess-game-implementation.md.
 
 const html = readFileSync(resolve("dist/index.html"), "utf8");
 const doc = new JSDOM(html).window.document;
@@ -41,25 +39,34 @@ const scripts = [...doc.querySelectorAll("script[src]")]
 const pageText = (doc.body.textContent ?? "").toLowerCase();
 
 describe("a game", () => {
-  it("can be lost: play reaches an ending, and the player is told", () => {
-    // The ending here is wordless and drawn on <canvas> (design: no
-    // on-screen text during play, no HUD) — this asserts against the game's
-    // own state machine instead of scanning the page for end-of-play words,
-    // per this test file's own note above about canvas-drawn endings.
-    // "Told" is render.ts's job (frozen last frame, the two numbers, the
-    // chevron), judged by eye rather than a DOM scan.
-    const game = createGame(1);
-    requestFlap(game); // ready -> flying, the one flap that starts the run
-    // never flap again: gravity alone is fatal, so this always terminates
-    for (let i = 0; i < 600 && game.phase === "flying"; i++) step(game);
-    expect(game.phase, "600 ticks of pure gravity never reached an ending").toBe("dead");
+  it("can be lost: play reaches an ending", () => {
+    // Missing every tier on every song, LIVES_START songs in a row, must end
+    // the run in "lost" — the state machine's own losing path, independent
+    // of anything drawn on screen.
+    let state = start(createInitialState(10));
+    for (let song = 0; song < LIVES_START; song++) {
+      for (let tier = 0; tier < TIERS.length; tier++) {
+        state = applyGuess(state, "not the right answer", "the actual title");
+      }
+    }
+    expect(state.phase, `${LIVES_START} missed songs never reached "lost"`).toBe("lost");
   });
 
   it("runs in this page's own JS — not a recording or an embed", () => {
     expect(
-      doc.querySelector("iframe, video[src], audio[src]"),
-      "an <iframe>/<video>/<audio> is doing the work — the game should run in this page's own script",
+      doc.querySelector("iframe, video[src]"),
+      "an <iframe>/<video> is doing the work — the game should run in this page's own script",
     ).toBeNull();
+    // <audio> IS the mechanic here (the clip is the puzzle), not a stand-in
+    // for gameplay — but its src must come from the script at runtime, not
+    // be baked into the shipped markup, or this would just be a static
+    // audio player, not a game.
+    const audio = doc.querySelector("audio");
+    expect(audio, "no <audio> element — where does the game play clips from?").not.toBeNull();
+    expect(
+      audio?.getAttribute("src"),
+      "<audio> has a static src baked into the HTML — it must be set at runtime by the script",
+    ).toBeFalsy();
     expect(
       scripts.trim().length,
       "no first-party script shipped — where does the game run?",
@@ -67,11 +74,8 @@ describe("a game", () => {
   });
 
   it("teaches itself: no how-to-play text or instructions panel", () => {
-    // A proxy for spec line 3. A person still judges whether the opening screen
-    // actually invites the first move — this only guards against the lazy fix
-    // of writing a tutorial instead.
     const tutorialWords = [
-      "how to play", "instructions", "controls:", "use the arrow keys",
+      "how to play", "instructions", "controls:",
       "objective:", "your goal is", "tutorial", "rules:",
     ];
     for (const w of tutorialWords) {
@@ -84,29 +88,19 @@ describe("a game", () => {
       doc.querySelector(
         "#instructions, #help, #tutorial, .instructions, .help, [data-help]",
       ),
-      "an instructions/help element is in the DOM — cut it; let the opening screen and play do the teaching",
+      "an instructions/help element is in the DOM — cut it; let the ▶ button and play do the teaching",
     ).toBeNull();
   });
 
-  it("has a focused automated test for one game rule: hits(bat, pillar)", () => {
-    // Spec line 5, paired with spec line 2 (the losing condition). A pure
-    // box-vs-gap check: does the bat, fixed at TUNING.batX, touch this
-    // pillar's stalactite or stalagmite?
-    const pillar = { x: TUNING.batX, gapY: 300, gapHalf: 65 };
-
-    // dead-centre in the gap: no hit
-    expect(hits({ y: 300, vy: 0 }, pillar)).toBe(false);
-
-    // grazing the stalactite (top): a hit
-    const topOfGap = pillar.gapY - pillar.gapHalf;
-    expect(hits({ y: topOfGap + TUNING.batRadius, vy: 0 }, pillar)).toBe(true);
-
-    // grazing the stalagmite (bottom): a hit
-    const bottomOfGap = pillar.gapY + pillar.gapHalf;
-    expect(hits({ y: bottomOfGap - TUNING.batRadius, vy: 0 }, pillar)).toBe(true);
-
-    // just past the pillar's trailing edge: no hit, even off-gap vertically
-    const passed = { ...pillar, x: TUNING.batX - TUNING.pillarWidth };
-    expect(hits({ y: topOfGap, vy: 0 }, passed)).toBe(false);
+  it("has a focused automated test for one game rule: matchesTitle(guess, title)", () => {
+    // Spec line 5, paired with spec line 2 (the losing condition). The one
+    // rule every round turns on: is this guess actually the song?
+    expect(matchesTitle("numb", "Numb")).toBe(true);
+    expect(matchesTitle("NUMB", "Numb")).toBe(true);
+    expect(matchesTitle("black parade", "The Black Parade")).toBe(true);
+    expect(matchesTitle("Im Not Okay", "I'm Not Okay")).toBe(true);
+    expect(matchesTitle("Crawling", "Numb")).toBe(false);
+    expect(matchesTitle("", "Numb")).toBe(false);
+    expect(matchesTitle("Black", "Welcome to the Black Parade")).toBe(false);
   });
 });
