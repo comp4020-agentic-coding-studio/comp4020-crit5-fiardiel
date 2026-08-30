@@ -86,38 +86,18 @@ export function matchesTitle(guess: string, title: string): boolean {
 }
 
 /**
- * Advances the state machine by one guess.
- * - Wrong on phase !== "playing": no-op (guards stray input after the run ends
- *   or while a reveal is pending acknowledgement).
- * - Empty/whitespace-only guess: no-op (spec: pressing Enter empty does nothing).
- * - Correct: score the current tier, record a "hit", advance to the next song
- *   (tier resets to 0). Never pauses on a reveal — only a miss does.
- * - Wrong, tier remains: advance to the next tier's clip.
- * - Wrong on the last tier: lose a life, record a "miss", and move to phase
- *   "reveal" instead of directly to the next song/won/lost — `reveal.nextPhase`
+ * Shared by a wrong guess and a skipped tier — both are "this tier is
+ * over, unsolved" and advance the state machine identically:
+ * - Tier remains: advance to the next (longer) tier's clip.
+ * - Last tier: lose a life, record a "miss", and move to phase "reveal"
+ *   instead of directly to the next song/won/lost — `reveal.nextPhase`
  *   already holds where `acknowledgeReveal` sends it, so the reveal itself
- *   changes nothing else about the state.
- * Ending: songIndex reaching totalSongs -> "won" (whether the last song was a
- * hit or a miss — lives are the only fail state). lives reaching 0 -> "lost",
- * checked before the songs-remaining check so losing the last life always wins.
+ *   changes nothing else about the state. songIndex reaching totalSongs ->
+ *   "won" (whether the last song was a hit or a miss — lives are the only
+ *   fail state). lives reaching 0 -> "lost", checked first so losing the
+ *   last life always wins over running out of songs.
  */
-export function applyGuess(
-  state: GameState,
-  guess: string,
-  correctTitle: string,
-  correctArtist: string = "",
-): GameState {
-  if (state.phase !== "playing") return state;
-  if (guess.trim().length === 0) return state;
-
-  if (matchesTitle(guess, correctTitle)) {
-    const score = state.score + scoreForTier(state.tier);
-    const songIndex = state.songIndex + 1;
-    const results = [...state.results, "hit" as const];
-    const phase: Phase = songIndex >= state.totalSongs ? "won" : "playing";
-    return { ...state, score, songIndex, tier: 0, phase, results };
-  }
-
+function missTier(state: GameState, correctTitle: string, correctArtist: string): GameState {
   const nextTier = state.tier + 1;
   if (nextTier < TIERS.length) {
     return { ...state, tier: nextTier };
@@ -145,6 +125,45 @@ export function applyGuess(
     phase: "reveal",
     reveal: { title: correctTitle, artist: correctArtist, nextPhase },
   };
+}
+
+/**
+ * Advances the state machine by one guess.
+ * - Wrong on phase !== "playing": no-op (guards stray input after the run ends
+ *   or while a reveal is pending acknowledgement).
+ * - Empty/whitespace-only guess: no-op (spec: pressing Enter empty does nothing).
+ * - Correct: score the current tier, record a "hit", advance to the next song
+ *   (tier resets to 0). Never pauses on a reveal — only a miss does.
+ * - Wrong: see missTier.
+ */
+export function applyGuess(
+  state: GameState,
+  guess: string,
+  correctTitle: string,
+  correctArtist: string = "",
+): GameState {
+  if (state.phase !== "playing") return state;
+  if (guess.trim().length === 0) return state;
+
+  if (matchesTitle(guess, correctTitle)) {
+    const score = state.score + scoreForTier(state.tier);
+    const songIndex = state.songIndex + 1;
+    const results = [...state.results, "hit" as const];
+    const phase: Phase = songIndex >= state.totalSongs ? "won" : "playing";
+    return { ...state, score, songIndex, tier: 0, phase, results };
+  }
+
+  return missTier(state, correctTitle, correctArtist);
+}
+
+/**
+ * Gives up on the current tier without guessing — advances exactly as a
+ * wrong guess would (see missTier), including costing a life and pausing
+ * on a reveal if this was the last tier. A no-op outside phase "playing".
+ */
+export function skipTier(state: GameState, correctTitle: string, correctArtist: string = ""): GameState {
+  if (state.phase !== "playing") return state;
+  return missTier(state, correctTitle, correctArtist);
 }
 
 /** The only way out of phase "reveal": swap in the phase decided back when

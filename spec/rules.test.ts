@@ -10,6 +10,7 @@ import {
   matchesTitle,
   normalizeTitle,
   scoreForTier,
+  skipTier,
   start,
 } from "../src/scripts/rules";
 
@@ -208,5 +209,38 @@ describe("applyGuess", () => {
   it("does nothing once the run has already ended", () => {
     const won: ReturnType<typeof createInitialState> = { ...start(createInitialState(1)), phase: "won" };
     expect(applyGuess(won, "Numb", "Numb", "Linkin Park")).toEqual(won);
+  });
+});
+
+describe("skipTier", () => {
+  it("advances the tier exactly like a wrong guess, without touching score, lives, song, or results", () => {
+    const state = start(createInitialState(3));
+    const guessed = applyGuess(state, "wrong", "Numb", "Linkin Park");
+    const skipped = skipTier(state, "Numb", "Linkin Park");
+    expect(skipped).toEqual(guessed);
+  });
+
+  it("skipping the last tier costs a life and pauses on a reveal, exactly like a wrong guess", () => {
+    let state = start(createInitialState(3));
+    for (let i = 0; i < TIERS.length - 1; i++) {
+      state = applyGuess(state, "wrong", "Numb", "Linkin Park");
+    }
+    const guessed = applyGuess(state, "wrong", "Numb", "Linkin Park");
+    const skipped = skipTier(state, "Numb", "Linkin Park");
+    expect(skipped).toEqual(guessed);
+    expect(skipped.phase).toBe("reveal");
+    expect(skipped.lives).toBe(LIVES_START - 1);
+  });
+
+  it("is a no-op outside phase playing", () => {
+    const idle = createInitialState(3);
+    expect(skipTier(idle, "Numb", "Linkin Park")).toEqual(idle);
+
+    let revealing = start(createInitialState(3));
+    for (let i = 0; i < TIERS.length; i++) {
+      revealing = applyGuess(revealing, "wrong", "Numb", "Linkin Park");
+    }
+    expect(revealing.phase).toBe("reveal");
+    expect(skipTier(revealing, "Numb", "Linkin Park")).toEqual(revealing);
   });
 });
