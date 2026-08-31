@@ -1,5 +1,6 @@
 ---
 import "../styles/styles.css";
+import { DIFFICULTIES } from "../scripts/rules";
 ---
 <!doctype html>
 <html lang="en-AU">
@@ -38,9 +39,12 @@ import "../styles/styles.css";
 
       <section id="idle-screen">
         <div id="difficulty-picker">
-          <button class="difficulty" data-difficulty="easy" type="button">Easy</button>
-          <button class="difficulty" data-difficulty="medium" type="button">Medium</button>
-          <button class="difficulty" data-difficulty="hard" type="button">Hard</button>
+          {DIFFICULTIES.map((d) => (
+            <button class="difficulty" data-difficulty={d.id} type="button">
+              {d.label}
+              <span class="song-count">{d.songs} songs</span>
+            </button>
+          ))}
         </div>
       </section>
 
@@ -53,24 +57,28 @@ import "../styles/styles.css";
           <button id="skip" type="button" aria-label="Skip to next clip">&#9197;</button>
         </div>
         <form id="guess-form" autocomplete="off">
-          <input
-            id="guess"
-            type="text"
-            placeholder="song title…"
-            aria-label="Song title"
-            autocomplete="off"
-            autocapitalize="off"
-            spellcheck="false"
-            role="combobox"
-            aria-autocomplete="list"
-            aria-expanded="false"
-            aria-controls="suggestions"
-          />
+          <div id="guess-row">
+            <input
+              id="guess"
+              type="text"
+              placeholder="song title…"
+              aria-label="Song title"
+              autocomplete="off"
+              autocapitalize="off"
+              spellcheck="false"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-expanded="false"
+              aria-controls="suggestions"
+            />
+            <button id="submit-guess" type="submit" aria-label="Submit guess">Enter</button>
+          </div>
           <ul id="suggestions" role="listbox" hidden></ul>
         </form>
         <div id="reveal-panel" hidden>
           <p id="reveal-message"></p>
           <p id="reveal-lives"></p>
+          <button id="reveal-continue" type="button">Continue</button>
         </div>
       </section>
 

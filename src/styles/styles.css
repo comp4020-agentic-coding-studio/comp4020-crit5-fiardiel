@@ -101,9 +101,13 @@ main {
 }
 
 .difficulty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
   font-size: 1.1rem;
   padding: 1rem 1.75rem;
-  border-radius: 999px;
+  border-radius: 1.25rem;
   border: 2px solid #f2f2f5;
   background: transparent;
   color: #f2f2f5;
@@ -113,6 +117,20 @@ main {
 .difficulty:hover,
 .difficulty:focus-visible {
   background: #f2f2f5;
+  color: #050507;
+}
+
+/* How many songs a run actually is — the first playtest question was
+   "is this 5 songs?" (it wasn't), so the count now sits right on the
+   button that picks it, not left to be discovered mid-run. */
+.song-count {
+  font-size: 0.75rem;
+  font-weight: normal;
+  color: #8a8a94;
+}
+
+.difficulty:hover .song-count,
+.difficulty:focus-visible .song-count {
   color: #050507;
 }
 
@@ -205,8 +223,17 @@ main {
   width: min(90vw, 24rem);
 }
 
+/* The input and its Enter button sit side by side — #suggestions still
+   positions against #guess-form itself (its own sibling here), not this
+   row, so the dropdown's left/right/top offsets are unaffected. */
+#guess-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
 #guess {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   box-sizing: border-box;
   padding: 0.9rem 1rem;
   font-size: 1.25rem;
@@ -223,6 +250,26 @@ main {
 
 #guess:disabled {
   opacity: 0.5;
+}
+
+/* An explicit Enter button next to the input — the physical Enter key
+   still works too (native form submit), this is just the discoverable,
+   tappable version of the same action. */
+#submit-guess {
+  flex-shrink: 0;
+  padding: 0 1.25rem;
+  font-size: 1.1rem;
+  border-radius: 0.5rem;
+  border: 2px solid #f2f2f5;
+  background: transparent;
+  color: #f2f2f5;
+  cursor: pointer;
+}
+
+#submit-guess:hover,
+#submit-guess:focus-visible {
+  background: #f2f2f5;
+  color: #050507;
 }
 
 /* Autocomplete dropdown: a plain list positioned under the input, not a
@@ -272,10 +319,40 @@ main {
   margin: 0;
 }
 
+/* Hit vs miss: same message element, colored by state.reveal.outcome
+   (main.ts toggles these) so a correct guess reads as clearly good news
+   as a miss reads as bad news. */
+.reveal-hit {
+  color: #4ade80;
+}
+
+.reveal-miss {
+  color: #ff5d7a;
+}
+
 #reveal-lives {
   font-size: 1.1rem;
   color: #ff5d7a;
   margin: 0;
+}
+
+/* Clicking anywhere on the panel already dismissed the reveal (event
+   bubbles up from here to #reveal-panel's own click listener) — this
+   button is the visible, discoverable version of that same action. */
+#reveal-continue {
+  font-size: 1.1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  border: 2px solid #f2f2f5;
+  background: transparent;
+  color: #f2f2f5;
+  cursor: pointer;
+}
+
+#reveal-continue:hover,
+#reveal-continue:focus-visible {
+  background: #f2f2f5;
+  color: #050507;
 }
 
 #end-screen {
@@ -309,5 +386,19 @@ main {
 
   #guess {
     font-size: 1.1rem;
+  }
+
+  #submit-guess {
+    padding: 0 0.9rem;
+    font-size: 1rem;
+  }
+
+  #reveal-continue {
+    font-size: 1rem;
+    padding: 0.6rem 0.9rem;
+  }
+
+  .song-count {
+    font-size: 0.7rem;
   }
 }

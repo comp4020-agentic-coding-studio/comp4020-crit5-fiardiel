@@ -166,13 +166,20 @@ function render(): void {
     guessInput.focus();
   }
   if (state.phase === "reveal" && state.reveal) {
-    revealMessage.textContent = `✗ "${state.reveal.title}" — ${state.reveal.artist}`;
-    // state.lives is already the post-loss count (rules.ts decrements before
-    // entering "reveal"), so "before" is always one more heart than that —
-    // except the lost-the-run case, where lives was exactly 1 going in.
-    const before = state.reveal.nextPhase === "lost" ? 1 : state.lives + 1;
-    const after = state.lives > 0 ? "♥".repeat(state.lives) : "none left";
-    revealLives.textContent = `You lost a life — ${"♥".repeat(before)} → ${after}`;
+    const isHit = state.reveal.outcome === "hit";
+    revealMessage.textContent = `${isHit ? "✓" : "✗"} "${state.reveal.title}" — ${state.reveal.artist}`;
+    revealMessage.classList.toggle("reveal-hit", isHit);
+    revealMessage.classList.toggle("reveal-miss", !isHit);
+    if (isHit) {
+      revealLives.textContent = "";
+    } else {
+      // state.lives is already the post-loss count (rules.ts decrements before
+      // entering "reveal"), so "before" is always one more heart than that —
+      // except the lost-the-run case, where lives was exactly 1 going in.
+      const before = state.reveal.nextPhase === "lost" ? 1 : state.lives + 1;
+      const after = state.lives > 0 ? "♥".repeat(state.lives) : "none left";
+      revealLives.textContent = `You lost a life — ${"♥".repeat(before)} → ${after}`;
+    }
   }
   if (state.phase === "won" || state.phase === "lost") {
     endMessage.textContent =
