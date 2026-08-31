@@ -145,3 +145,39 @@ guessing, and a quit button abandons the run back to the difficulty picker.
    `DIFFICULTIES.map()` so the "N songs" subline on each button can never
    drift out of sync with the actual array — a second hardcoded copy of
    5/10/20 was the more obvious move and the one deliberately avoided.
+
+5. **A bug that reading the code could not find, a test that agreed with the
+   code, and a screenshot that was right all along.** A fifth playtest
+   reported the reveal panel still on screen during the *next* song. Reading
+   `main.ts` said the opposite: `render()` sets
+   `revealPanel.hidden = state.phase !== "reveal"` unconditionally, and
+   `styles.css` had no competing `display` on the controls I thought were at
+   fault. Rather than argue with the screenshot, I built the thing the repo
+   didn't have —
+   [`f9f5662`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit5-fiardiel/commit/f9f5662)
+   loads the *built* `dist/` HTML, CSS and JS into jsdom, re-tags the shipped
+   `type="module"` bundle as a classic script so jsdom will actually execute
+   it (Vite inlines it fully, so it has no top-level import/export to break),
+   and drives it through real clicks and real form submits. Every previous
+   test in `spec/` only parsed static markup; none had ever run the game.
+   It passed — and I nearly shipped that pass as "the code is fine, hard-refresh
+   your browser". It was a false negative: it asserted `.hidden`, which reads
+   `true` for the entire time the bug is on screen. The screenshot itself
+   held the disproof. Its progress bar drew a third `seg-current`, and
+   `renderProgressBar()` only draws `seg-current` outside a reveal — so the
+   run had already advanced, the play/skip/input controls I'd blamed were
+   correctly visible, and the panel drawn on top of them was stale.
+   [`7d28e21`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit5-fiardiel/commit/7d28e21)
+   fixes the actual cause: `#reveal-panel { display: flex }` is an id selector
+   (1,0,0) and outranks the UA stylesheet's `[hidden] { display: none }`
+   (0,1,0), so `.hidden = true` set the attribute and changed nothing about
+   how the element drew. The panel had been permanently visible since the day
+   it was added, invisible only because it was empty until the first reveal
+   filled it in. `styles.css` already documents this exact trap and guards
+   `#idle-screen`/`#play-screen`/`#end-screen`/`#suggestions` against it;
+   `#reveal-panel` arrived later without the override. The same commit
+   extends the test to assert *computed display* rather than `.hidden` — it
+   fails on the old CSS with `expected 'flex' to be 'none'` and passes on
+   the new. The lesson worth keeping is not the CSS rule: it's that a test
+   asserting the property the bug doesn't touch is more dangerous than no
+   test, because it converts a true bug report into false confidence.
