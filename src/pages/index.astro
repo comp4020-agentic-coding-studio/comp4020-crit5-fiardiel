@@ -45,9 +45,13 @@ import "../styles/styles.css";
       </section>
 
       <section id="play-screen" hidden>
+        <button id="quit" type="button" aria-label="Quit to menu">Quit</button>
         <div id="tier-pips"></div>
         <div id="progress-bar"></div>
-        <button id="replay" type="button" aria-label="Replay clip">&#8635;</button>
+        <div id="clip-controls">
+          <button id="play-clip" type="button" aria-label="Play clip">&#9658;</button>
+          <button id="skip" type="button" aria-label="Skip to next clip">&#9197;</button>
+        </div>
         <form id="guess-form" autocomplete="off">
           <input
             id="guess"

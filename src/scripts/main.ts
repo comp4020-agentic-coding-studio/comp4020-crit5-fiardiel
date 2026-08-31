@@ -5,6 +5,7 @@ import {
   acknowledgeReveal,
   applyGuess,
   createInitialState,
+  skipTier,
   start,
   type Difficulty,
   type DifficultyId,
@@ -23,7 +24,9 @@ const endEl = document.querySelector<HTMLElement>("#end-screen");
 const endMessageEl = document.querySelector<HTMLElement>("#end-message");
 const tierPipsEl = document.querySelector<HTMLElement>("#tier-pips");
 const progressBarEl = document.querySelector<HTMLElement>("#progress-bar");
-const replayEl = document.querySelector<HTMLButtonElement>("#replay");
+const playClipEl = document.querySelector<HTMLButtonElement>("#play-clip");
+const skipEl = document.querySelector<HTMLButtonElement>("#skip");
+const quitEl = document.querySelector<HTMLButtonElement>("#quit");
 const revealPanelEl = document.querySelector<HTMLElement>("#reveal-panel");
 const revealMessageEl = document.querySelector<HTMLElement>("#reveal-message");
 const revealLivesEl = document.querySelector<HTMLElement>("#reveal-lives");
@@ -32,7 +35,7 @@ const difficultyButtons = document.querySelectorAll<HTMLButtonElement>(".difficu
 if (
   !formEl || !inputEl || !suggestionsEl || !audioEl || !scoreEl || !livesEl ||
   !idleEl || !playEl || !endEl || !endMessageEl || !tierPipsEl || !progressBarEl ||
-  !replayEl || !revealPanelEl || !revealMessageEl || !revealLivesEl ||
+  !playClipEl || !skipEl || !quitEl || !revealPanelEl || !revealMessageEl || !revealLivesEl ||
   difficultyButtons.length === 0
 ) {
   throw new Error("song game: expected page markup is missing");
@@ -52,7 +55,9 @@ const endScreen: HTMLElement = endEl;
 const endMessage: HTMLElement = endMessageEl;
 const tierPips: HTMLElement = tierPipsEl;
 const progressBar: HTMLElement = progressBarEl;
-const replayButton: HTMLButtonElement = replayEl;
+const playClipButton: HTMLButtonElement = playClipEl;
+const skipButton: HTMLButtonElement = skipEl;
+const quitButton: HTMLButtonElement = quitEl;
 const revealPanel: HTMLElement = revealPanelEl;
 const revealMessage: HTMLElement = revealMessageEl;
 const revealLives: HTMLElement = revealLivesEl;
@@ -63,11 +68,11 @@ const MAX_SUGGESTIONS = 6;
 let order: Song[] = [];
 let state = createInitialState(0);
 
-// Caches the current song's resolved preview URL so the free replay button
-// and every later tier of the same song play instantly instead of re-hitting
-// iTunes. Keyed by songIndex and reset on every difficulty pick/restart —
-// songIndex only ever increases within a run, so a stale entry can't leak
-// forward into the next song.
+// Caches the current song's resolved preview URL so the free play-clip
+// button and every later tier of the same song play instantly instead of
+// re-hitting iTunes. Keyed by songIndex and reset on every difficulty
+// pick/restart — songIndex only ever increases within a run, so a stale
+// entry can't leak forward into the next song.
 let urlCache: { songIndex: number; url: string | null } | null = null;
 
 function currentSong(): Song | undefined {
@@ -149,7 +154,8 @@ function render(): void {
 
   guessForm.hidden = state.phase === "reveal";
   revealPanel.hidden = state.phase !== "reveal";
-  replayButton.hidden = state.phase !== "playing";
+  playClipButton.hidden = state.phase !== "playing";
+  skipButton.hidden = state.phase !== "playing";
   guessInput.disabled = state.phase !== "playing";
 
   renderTierPips();
@@ -237,6 +243,20 @@ function dismissReveal(): void {
   if (state.phase === "playing") void playCurrentTier();
 }
 
+// Shared by a submitted guess and a skip: both may advance the tier or the
+// song (or neither, on a wrong-but-not-last-tier guess never reaching here
+// unchanged — callers only invoke this after state has actually moved).
+// Renders the new state, then auto-plays the next clip only when the tier
+// or song actually changed and the run is still "playing" — a reveal pauses
+// here until dismissed, matching dismissReveal's own resume logic.
+function afterAdvance(prevSongIndex: number, prevTier: number): void {
+  render();
+  if (state.phase !== "playing") return;
+  if (state.songIndex !== prevSongIndex || state.tier !== prevTier) {
+    void playCurrentTier();
+  }
+}
+
 difficultyButtons.forEach((button) => {
   button.addEventListener("click", () => {
     const id = button.dataset.difficulty as DifficultyId | undefined;
@@ -246,10 +266,27 @@ difficultyButtons.forEach((button) => {
   });
 });
 
-replayButton.addEventListener("click", () => {
+playClipButton.addEventListener("click", () => {
   if (state.phase !== "playing") return;
   void playCurrentTier();
 });
+
+skipButton.addEventListener("click", () => {
+  if (state.phase !== "playing") return;
+  const song = currentSong();
+  if (!song) return;
+
+  guessInput.value = "";
+  currentSuggestions = [];
+  activeSuggestionIndex = -1;
+
+  const prevSongIndex = state.songIndex;
+  const prevTier = state.tier;
+  state = skipTier(state, song.title, song.artist);
+  afterAdvance(prevSongIndex, prevTier);
+});
+
+quitButton.addEventListener("click", returnToPicker);
 
 // --- Autocomplete: suggestions drawn from the full song list, never just
 // this run's songs — narrowing to the run's own titles would hand over the
@@ -321,13 +358,7 @@ guessForm.addEventListener("submit", (event) => {
   const prevSongIndex = state.songIndex;
   const prevTier = state.tier;
   state = applyGuess(state, guess, song.title, song.artist);
-  render();
-
-  if (state.phase === "reveal") return; // pauses here until dismissed
-  if (state.phase !== "playing") return;
-  if (state.songIndex !== prevSongIndex || state.tier !== prevTier) {
-    void playCurrentTier();
-  }
+  afterAdvance(prevSongIndex, prevTier);
 });
 
 document.addEventListener("keydown", (event) => {

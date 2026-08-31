@@ -52,6 +52,7 @@ main {
 }
 
 #play-screen {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -59,6 +60,30 @@ main {
   min-height: 60vh;
   padding: 1rem;
   text-align: center;
+}
+
+/* Quit sits out of the main flow, in a corner — always reachable during
+   "playing" and "reveal" alike (see main.ts: #play-screen itself is only
+   shown for those two phases, so this needs no show/hide logic of its
+   own), but deliberately understated next to the play-clip/skip controls
+   so it doesn't compete with them for attention. */
+#quit {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid #4a4a52;
+  background: transparent;
+  color: #8a8a94;
+  cursor: pointer;
+}
+
+#quit:hover,
+#quit:focus-visible {
+  border-color: #f2f2f5;
+  color: #f2f2f5;
 }
 
 /* An id selector otherwise outweighs the UA stylesheet's [hidden] rule, so
@@ -146,7 +171,16 @@ main {
   outline-offset: 1px;
 }
 
-#replay {
+/* Clip controls: play-clip (replay the current tier's clip on demand) and
+   skip (give up on this tier and move straight to the next, longer one)
+   sit side by side — same button styling, so neither reads as primary. */
+#clip-controls {
+  display: flex;
+  gap: 1rem;
+}
+
+#play-clip,
+#skip {
   font-size: 1.75rem;
   line-height: 1;
   width: 3rem;
@@ -158,8 +192,10 @@ main {
   cursor: pointer;
 }
 
-#replay:hover,
-#replay:focus-visible {
+#play-clip:hover,
+#play-clip:focus-visible,
+#skip:hover,
+#skip:focus-visible {
   background: #f2f2f5;
   color: #050507;
 }
@@ -257,10 +293,18 @@ main {
     padding: 0.8rem 1.25rem;
   }
 
-  #replay {
+  #play-clip,
+  #skip {
     width: 2.5rem;
     height: 2.5rem;
     font-size: 1.4rem;
+  }
+
+  #quit {
+    top: 0.6rem;
+    right: 0.6rem;
+    font-size: 0.75rem;
+    padding: 0.3rem 0.6rem;
   }
 
   #guess {
