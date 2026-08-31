@@ -5,14 +5,17 @@
 **One More Second**, a Heardle-style song-guessing game: one Linkin Park or My
 Chemical Romance song per round, revealed through a fixed ladder of iTunes
 preview clips that starts at a tenth of a second and grows to fifteen. Type
-the title (or pick it from autocomplete suggestions), get it right and the
-clip shrinks back down for the next song; get it wrong five times and a
-reveal panel shows the song and that you lost a life. Three lives on every
-difficulty; pick Easy (5 songs), Medium (10), or Hard (20) before the run
-starts — tier pips and a progress bar track where you are inside it, a
-play-clip button lets you hear the current clip again at any time, a skip
-button gives up on the current tier without guessing, and a quit button
-abandons the run back to the difficulty picker.
+the title (or pick it from autocomplete suggestions) and hit Enter — or tap
+the Enter button — to guess; get it right and a reveal panel confirms the
+song and artist in green before the clip shrinks back down for the next
+song, get it wrong five times and the same panel shows the song and artist
+in red plus the life you lost. Either way a visible Continue button (or a
+tap anywhere on the panel) moves on. Three lives on every difficulty; pick
+Easy (5 songs), Medium (10), or Hard (20) — the count is printed right on
+each button — before the run starts. Tier pips and a progress bar track
+where you are inside it, a play-clip button lets you hear the current clip
+again at any time, a skip button gives up on the current tier without
+guessing, and a quit button abandons the run back to the difficulty picker.
 
 ## The moments that mattered
 
@@ -119,3 +122,26 @@ abandons the run back to the difficulty picker.
    each fix round surfaced something (run length, then the strictness of
    typing an exact title from memory, then control affordances the first
    two rounds hadn't touched) that the next round then addressed.
+   A fourth round, playing with the skip/quit controls in place, surfaced a
+   sharper version of the same "no on-screen confirmation" gap the first
+   round had only half-closed: a screenshot showed a miss's reveal panel
+   with no visible way to move on (tap-anywhere already worked, it just
+   wasn't discoverable), a correct guess still advanced silently with no
+   confirmation of the song and artist, there was no explicit Enter control
+   next to the guess input, and the difficulty picker didn't say how many
+   songs each option actually was. [`585677b`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit5-fiardiel/commit/585677b)
+   extended the `"reveal"` phase to pause on a correct guess too — `Reveal`
+   gained an `outcome: "hit" | "miss"` field, and `applyGuess`'s hit branch
+   now builds a reveal exactly like `missTier` already did, rather than
+   sailing straight through to the next song. [`28d652e`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit5-fiardiel/commit/28d652e)
+   then added the two buttons that gap actually called for, both wired with
+   zero new event listeners by reusing plumbing already in place: `#submit-guess`
+   is a native `type="submit"` button inside the existing guess form, so it
+   triggers the form's own submit handler (already guarded to no-op outside
+   `"playing"`); `#reveal-continue` is a DOM child of `#reveal-panel`, so a
+   click on it bubbles up to the panel's existing click listener. The same
+   commit colored the reveal message green for a hit and red for a miss, and
+   moved the difficulty picker's markup into an Astro frontmatter
+   `DIFFICULTIES.map()` so the "N songs" subline on each button can never
+   drift out of sync with the actual array — a second hardcoded copy of
+   5/10/20 was the more obvious move and the one deliberately avoided.

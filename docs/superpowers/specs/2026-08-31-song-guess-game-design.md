@@ -173,8 +173,8 @@ existing dark aesthetic is a nice-to-have, not a requirement):
 
 ## Playtest-driven changes (what actually shipped)
 
-The MVP above shipped first and was played. Real playtesting surfaced five
-problems the design above didn't anticipate, across three fix rounds:
+The MVP above shipped first and was played. Real playtesting surfaced six
+problems the design above didn't anticipate, across four fix rounds:
 
 1. **The 0.5s tier had no indicator, and the ▶ button vanished with no way
    to replay a clip.** A player who missed a guess had no way to hear the
@@ -230,8 +230,29 @@ problems the design above didn't anticipate, across three fix rounds:
    confirmation — restarting is free, so there's nothing worth protecting
    behind a dialog.
 
-These five are the actual "one change verified by playing, not reading
-code" this spec's compliance table promises — played three times, not
+6. **A fourth round of feedback, after skip/quit shipped: a miss's reveal
+   panel had no visible way to move on, a correct guess still advanced
+   silently with no confirmation, there was no explicit Enter control, and
+   the difficulty picker didn't say how many songs each option actually
+   was.** The tap-anywhere-to-continue behavior from point 2 already
+   worked; a screenshot showed it just wasn't discoverable. Fix: the
+   `"reveal"` phase now pauses on a **correct** guess too, not just a
+   miss — `Reveal` gained an `outcome: "hit" | "miss"` field, and
+   `applyGuess`'s hit branch builds a reveal exactly like `missTier`
+   already did, naming the song and artist and coloring the message green
+   (red for a miss). Two new buttons close the discoverability gap: an
+   **Enter button** (`#submit-guess`) beside the guess input, and a
+   **Continue button** (`#reveal-continue`) inside the reveal panel — both
+   need zero new JavaScript, since `#submit-guess` is a native
+   `type="submit"` triggering the guess form's existing submit handler, and
+   `#reveal-continue` is a DOM child of `#reveal-panel` whose click bubbles
+   to the panel's existing click listener. The difficulty picker's markup
+   moved into an Astro frontmatter `DIFFICULTIES.map()` so each button's
+   "N songs" subline reads straight from the same array `DIFFICULTIES`
+   already defines, rather than a second hardcoded copy that could drift.
+
+These six are the actual "one change verified by playing, not reading
+code" this spec's compliance table promises — played four times, not
 once, because each fix round surfaced something the next round then
 addressed.
 
@@ -257,7 +278,7 @@ Reuses the existing harness from the Echo build, same shape:
 ## Tuning knobs (superseded — the mandatory playtest-driven change happened; see above)
 
 This section originally asked for **one** knob to be picked after playing
-a full run. What actually happened: two full playtest rounds, both cited
+a full run. What actually happened: four full playtest rounds, all cited
 in "Playtest-driven changes" above and in `PROCESS.md`. `matchesTitle`
 itself was never loosened — the autocomplete suggestions addressed the
 same "exact title from memory" friction without weakening what counts as
