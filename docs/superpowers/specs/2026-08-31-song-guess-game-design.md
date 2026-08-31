@@ -19,7 +19,7 @@ requires, mapped to this design:
 | It can be lost | 3 lives on every difficulty; exhausting them ends the run. |
 | A stranger reaches an ending inside 5 minutes | Easy (5 songs) and Medium (10 songs) land well under 5 minutes; Hard (20 songs) is the deliberate longer/endurance option for a returning player, not the default. |
 | One rule has a focused automated test | The scoring ladder and the title-matching function are pure, and are exactly what gets unit-tested. |
-| One change verified by playing, not reading code | See "Playtest-driven changes" below — this build shipped, was played, and was reworked on that feedback, twice. |
+| One change verified by playing, not reading code | See "Playtest-driven changes" below — this build shipped, was played, and was reworked on that feedback, three times. |
 | PROCESS.md, reflections/crit-5.md, incremental commits | Carried over from the existing harness unchanged. |
 
 No IP/licensing constraint is stated in the brief. See "Audio pipeline and
@@ -173,15 +173,16 @@ existing dark aesthetic is a nice-to-have, not a requirement):
 
 ## Playtest-driven changes (what actually shipped)
 
-The MVP above shipped first and was played. Real playtesting surfaced four
-problems the design above didn't anticipate, all fixed in the same round:
+The MVP above shipped first and was played. Real playtesting surfaced five
+problems the design above didn't anticipate, across three fix rounds:
 
 1. **The 0.5s tier had no indicator, and the ▶ button vanished with no way
    to replay a clip.** A player who missed a guess had no way to hear the
    current clip again, and nothing on screen told them which tier (of 5)
-   they were on. Fix: a **replay button** (`#replay`, always visible during
-   a round — tapping it replays the current tier's clip from a cached URL,
-   no re-fetch) and **tier pips** (`#tier-pips`, one pip per reveal-ladder
+   they were on. Fix: a **play-clip button** (`#play-clip`, always visible
+   during a round — tapping it (re)plays the current tier's clip from a
+   cached URL, no re-fetch; originally shipped as `#replay` with a ↻ icon,
+   see point 5) and **tier pips** (`#tier-pips`, one pip per reveal-ladder
    step, marking the current one) — both contradict the original "no round
    counter, no tier indicator" UI rule above; that rule turned out to be
    wrong once actually played.
@@ -211,9 +212,27 @@ problems the design above didn't anticipate, all fixed in the same round:
    only prefix-match datalist options, which would miss "In the End" for a
    query of "end".
 
-These four are the actual "one change verified by playing, not reading
-code" this spec's compliance table promises — played twice, not once,
-because the first fix round surfaced problems the second round then
+5. **A third round of feedback, after the difficulty tiers and autocomplete
+   shipped: the button never needed to be framed as a "replay" specifically,
+   there was no way to give up on a tier without guessing wrong, and no way
+   to bail out of a run back to the difficulty picker.** Fix: `#replay`
+   (↻) is renamed to `#play-clip` (▶) — its actual job was always just
+   "play the current clip", and calling it a *replay* control wrongly
+   implied it only mattered after the clip had played once. A new **skip
+   button** (`#skip`) advances straight to the next, longer tier without
+   requiring a guess — it routes through the same state transition as a
+   wrong guess (`skipTier` in `src/scripts/rules.ts`, sharing the extracted
+   `missTier` helper with `applyGuess`), so skipping the last tier still
+   costs a life and pauses on the reveal panel exactly like a miss would;
+   skip can't be used to dodge the game's one real stake. A new **quit
+   button** (`#quit`, always visible during a round) abandons the current
+   run's progress and returns to the difficulty picker, with no
+   confirmation — restarting is free, so there's nothing worth protecting
+   behind a dialog.
+
+These five are the actual "one change verified by playing, not reading
+code" this spec's compliance table promises — played three times, not
+once, because each fix round surfaced something the next round then
 addressed.
 
 ## Technical architecture

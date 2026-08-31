@@ -9,8 +9,10 @@ the title (or pick it from autocomplete suggestions), get it right and the
 clip shrinks back down for the next song; get it wrong five times and a
 reveal panel shows the song and that you lost a life. Three lives on every
 difficulty; pick Easy (5 songs), Medium (10), or Hard (20) before the run
-starts — tier pips and a progress bar track where you are inside it, and a
-replay button lets you hear the current clip again at any time.
+starts — tier pips and a progress bar track where you are inside it, a
+play-clip button lets you hear the current clip again at any time, a skip
+button gives up on the current tier without guessing, and a quit button
+abandons the run back to the difficulty picker.
 
 ## The moments that mattered
 
@@ -98,8 +100,22 @@ replay button lets you hear the current clip again at any time.
    design spec (`docs/superpowers/specs/2026-08-31-song-guess-game-design.md`)
    was updated in the same round to mark the superseded sections and record
    why each change was made, rather than silently drifting from what the
-   code now does. This is the mandatory "one change verified by playing, not
-   reading code" the spec's compliance table promises — it happened twice,
-   because the first fix round surfaced problems (run length, the strictness
-   of typing an exact title from memory) that the second round then
-   addressed.
+   code now does. A third round of feedback followed once the difficulty
+   tiers and autocomplete had actually been played: the replay button
+   didn't need to be framed as specifically a *replay* control, there was
+   no way to give up on a tier without guessing wrong, and no way to bail
+   out of a run back to the difficulty picker.
+   [`51a42bd`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit5-fiardiel/commit/51a42bd)
+   renamed `#replay`/↻ to `#play-clip`/▶ (its job was always just "play the
+   current clip"), added a skip button that routes through the exact same
+   `rules.ts` state transition as a wrong guess — `skipTier` shares the
+   `missTier` helper extracted from `applyGuess`, so skipping the last tier
+   still costs a life and pauses on the reveal panel, closing off the
+   obvious exploit of using skip to dodge the game's one real stake — and
+   added an always-visible quit button with no confirmation dialog, since
+   abandoning a run and restarting costs nothing worth protecting. This is
+   the mandatory "one change verified by playing, not reading code" the
+   spec's compliance table promises — it happened three times, because
+   each fix round surfaced something (run length, then the strictness of
+   typing an exact title from memory, then control affordances the first
+   two rounds hadn't touched) that the next round then addressed.
