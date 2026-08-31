@@ -29,9 +29,14 @@ export type Phase = "idle" | "playing" | "reveal" | "won" | "lost";
 export type RoundResult = "hit" | "miss";
 
 /** Held only while phase === "reveal": what to show, and where to go once
- *  the player acknowledges it (tap or Enter) — computed once, up front, so
- *  acknowledging is a pure phase swap with no further branching. */
+ *  the player acknowledges it (tap, Enter, or the Continue button) —
+ *  computed once, up front, so acknowledging is a pure phase swap with no
+ *  further branching. `outcome` distinguishes a correct guess (title/artist
+ *  are the song just won) from a miss (title/artist are the song that got
+ *  away) — both pause here so the player always sees a confirmation before
+ *  the run moves on. */
 export interface Reveal {
+  readonly outcome: "hit" | "miss";
   readonly title: string;
   readonly artist: string;
   readonly nextPhase: "playing" | "won" | "lost";
@@ -111,7 +116,7 @@ function missTier(state: GameState, correctTitle: string, correctArtist: string)
       lives: 0,
       results,
       phase: "reveal",
-      reveal: { title: correctTitle, artist: correctArtist, nextPhase: "lost" },
+      reveal: { outcome: "miss", title: correctTitle, artist: correctArtist, nextPhase: "lost" },
     };
   }
   const songIndex = state.songIndex + 1;
@@ -123,7 +128,7 @@ function missTier(state: GameState, correctTitle: string, correctArtist: string)
     tier: 0,
     results,
     phase: "reveal",
-    reveal: { title: correctTitle, artist: correctArtist, nextPhase },
+    reveal: { outcome: "miss", title: correctTitle, artist: correctArtist, nextPhase },
   };
 }
 
@@ -132,8 +137,11 @@ function missTier(state: GameState, correctTitle: string, correctArtist: string)
  * - Wrong on phase !== "playing": no-op (guards stray input after the run ends
  *   or while a reveal is pending acknowledgement).
  * - Empty/whitespace-only guess: no-op (spec: pressing Enter empty does nothing).
- * - Correct: score the current tier, record a "hit", advance to the next song
- *   (tier resets to 0). Never pauses on a reveal — only a miss does.
+ * - Correct: score the current tier, record a "hit", and pause on a reveal
+ *   naming the song and artist just won — exactly like a miss, so the player
+ *   always sees a confirmation before the run advances to the next song (or
+ *   to "won", on the last one). `acknowledgeReveal` carries out the already-
+ *   decided songIndex/tier reset once the player continues.
  * - Wrong: see missTier.
  */
 export function applyGuess(
@@ -149,8 +157,16 @@ export function applyGuess(
     const score = state.score + scoreForTier(state.tier);
     const songIndex = state.songIndex + 1;
     const results = [...state.results, "hit" as const];
-    const phase: Phase = songIndex >= state.totalSongs ? "won" : "playing";
-    return { ...state, score, songIndex, tier: 0, phase, results };
+    const nextPhase: Phase = songIndex >= state.totalSongs ? "won" : "playing";
+    return {
+      ...state,
+      score,
+      songIndex,
+      tier: 0,
+      results,
+      phase: "reveal",
+      reveal: { outcome: "hit", title: correctTitle, artist: correctArtist, nextPhase },
+    };
   }
 
   return missTier(state, correctTitle, correctArtist);

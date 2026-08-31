@@ -99,14 +99,19 @@ describe("createInitialState / start", () => {
 });
 
 describe("applyGuess", () => {
-  it("a correct guess scores the current tier, records a hit, and advances to the next song", () => {
+  it("a correct guess scores the current tier, records a hit, and pauses on a reveal naming the song and artist", () => {
     const state = start(createInitialState(3));
     const next = applyGuess(state, "Numb", "Numb", "Linkin Park");
     expect(next.score).toBe(5);
     expect(next.songIndex).toBe(1);
     expect(next.tier).toBe(0);
-    expect(next.phase).toBe("playing");
+    expect(next.phase).toBe("reveal");
     expect(next.results).toEqual(["hit"]);
+    expect(next.reveal).toEqual({ outcome: "hit", title: "Numb", artist: "Linkin Park", nextPhase: "playing" });
+
+    const acked = acknowledgeReveal(next);
+    expect(acked.phase).toBe("playing");
+    expect(acked.reveal).toBeNull();
   });
 
   it("a wrong guess advances the tier without touching score, lives, song, or results", () => {
@@ -134,7 +139,7 @@ describe("applyGuess", () => {
     expect(state.lives).toBe(LIVES_START - 1);
     expect(state.phase).toBe("reveal");
     expect(state.results).toEqual(["miss"]);
-    expect(state.reveal).toEqual({ title: "Numb", artist: "Linkin Park", nextPhase: "playing" });
+    expect(state.reveal).toEqual({ outcome: "miss", title: "Numb", artist: "Linkin Park", nextPhase: "playing" });
     // songIndex/tier for the next song are already decided, but phase stays
     // "reveal" until acknowledged — nothing else advances early.
     expect(state.songIndex).toBe(1);
@@ -182,7 +187,11 @@ describe("applyGuess", () => {
   it("correctly finishing the last song ends the run as won", () => {
     let state = start(createInitialState(2));
     state = applyGuess(state, "Numb", "Numb", "Linkin Park");
+    state = acknowledgeReveal(state); // a hit pauses on a reveal too — carry on
     state = applyGuess(state, "Crawling", "Crawling", "Linkin Park");
+    expect(state.phase).toBe("reveal");
+    expect(state.reveal?.nextPhase).toBe("won");
+    state = acknowledgeReveal(state);
     expect(state.phase).toBe("won");
     expect(state.score).toBe(10);
     expect(state.results).toEqual(["hit", "hit"]);
