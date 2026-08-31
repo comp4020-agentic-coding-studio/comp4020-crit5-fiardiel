@@ -314,6 +314,17 @@ main {
   cursor: pointer;
 }
 
+/* Same id-vs-[hidden] specificity trap as the screens above: the `display`
+   on the rule right before this one is (1,0,0) and outranks the UA
+   stylesheet's `[hidden] { display: none }` at (0,1,0), so main.ts setting
+   `revealPanel.hidden = true` would set the attribute and change nothing on
+   screen — the panel stayed up showing the last song's answer while the
+   next song played underneath it. Caught by playtest, not by reading:
+   `.hidden` reads `true` the whole time it's wrong. */
+#reveal-panel[hidden] {
+  display: none;
+}
+
 #reveal-message {
   font-size: 1.4rem;
   margin: 0;

@@ -107,4 +107,50 @@ describe("the reveal panel actually hides the playing-phase controls", () => {
     expect(displayOf(revealPanel)).not.toBe("none");
     expect(document.querySelector("#reveal-message")?.textContent).toMatch(/^✗ /);
   });
+
+  it("puts the reveal panel away again once it's dismissed, so it can't linger into the next song", async () => {
+    // The bug this guards: `#reveal-panel { display: flex }` is an id
+    // selector (1,0,0), which out-cascades the browser's default
+    // `[hidden] { display: none }` (0,1,0). Setting `.hidden = true` then
+    // sets the attribute and changes nothing on screen — the panel stays up,
+    // still showing the previous song's answer, while the next song plays
+    // underneath it. Checking `.hidden` alone passes straight through this;
+    // only the computed display catches it, which is why both are asserted.
+    const { window, document } = loadGamePage();
+    await flush(50);
+
+    const easyButton = document.querySelector('.difficulty[data-difficulty="easy"]');
+    easyButton?.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await flush(50);
+
+    const guessInput = document.querySelector<HTMLInputElement>("#guess");
+    const guessForm = document.querySelector<HTMLFormElement>("#guess-form");
+    const revealPanel = document.querySelector<HTMLDivElement>("#reveal-panel");
+    const displayOf = (el: Element | null) => (el ? window.getComputedStyle(el).display : null);
+
+    // Before any reveal has happened, the panel must already be out of the layout.
+    expect(displayOf(revealPanel), "the reveal panel is on screen before any reveal happened").toBe("none");
+
+    for (let i = 0; i < TIERS.length; i++) {
+      guessInput!.value = "definitely not a real song title";
+      guessForm?.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true }));
+      await flush(20);
+    }
+    expect(revealPanel?.hidden).toBe(false);
+
+    // Dismiss it the way a player does — the Continue button, whose click
+    // bubbles to #reveal-panel's own listener.
+    document.querySelector<HTMLButtonElement>("#reveal-continue")
+      ?.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await flush(50);
+
+    expect(revealPanel?.hidden, "the reveal was dismissed but the panel stayed marked visible").toBe(true);
+    expect(
+      displayOf(revealPanel),
+      "the reveal panel is still drawn after being dismissed — it will sit over the next song showing the last song's answer",
+    ).toBe("none");
+    // And the playing controls must be back.
+    expect(displayOf(guessForm)).not.toBe("none");
+    expect(displayOf(document.querySelector("#play-clip"))).not.toBe("none");
+  });
 });
